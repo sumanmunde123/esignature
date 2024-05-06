@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editable PDF Viewer</title>
+</head>
+<body>
+    <center>
+        <h1 style="color: green">Editable PDF Viewer</h1>
+        <h3>Select a PDF file to view:</h3>
+        <input type="file" id="pdfFileInput">
+        <br><br>
+        <div id="pdfContainer"></div>
+      
+    </center>
+
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <script>
+        const pdfFileInput = document.getElementById("pdfFileInput");
+        const pdfContainer = document.getElementById("pdfContainer");
+        let pdfInstance;
+
+        pdfFileInput.addEventListener("change", function(event) {
+            const selectedFile = event.target.files[0];
+
+            if (selectedFile && selectedFile.type === "application/pdf") {
+                const fileReader = new FileReader();
+
+                fileReader.onload = function() {
+                    const arrayBuffer = this.result;
+
+                    pdfjsLib.getDocument({ data: arrayBuffer }).promise.then(function(pdf) {
+                        pdfInstance = pdf;
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            pdf.getPage(pageNum).then(function(page) {
+                                const canvas = document.createElement("canvas");
+                                pdfContainer.appendChild(canvas);
+
+                                const viewport = page.getViewport({ scale: 1.5 });
+                                canvas.width = viewport.width;
+                                canvas.height = viewport.height;
+
+                                const canvasContext = canvas.getContext("2d");
+                                const renderContext = {
+                                    canvasContext,
+                                    viewport
+                                };
+
+                                page.render(renderContext);
+
+                                // Enable text annotation on canvas click
+                                canvas.addEventListener("click", function(e) {
+                                    const rect = canvas.getBoundingClientRect();
+                                    const x = e.clientX - rect.left;
+                                    const y = e.clientY - rect.top;
+
+                                    const text = prompt("Enter your text:");
+                                    if (text) {
+                                        canvasContext.font = "16px Arial";
+                                        canvasContext.fillText(text, x, y);
+                                    }
+                                });
+                            });
+                        }
+                    });
+                };
+
+                fileReader.readAsArrayBuffer(selectedFile);
+            } else {
+                alert("Please select a valid PDF file.");
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+<!-- 
+
+<div>dexciss</div>
+<h1>dexciss <span>tech</span></h1>
+<img  height="300px" width="400px" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKn-X2ZRRr7DWK4gEnkQFFo_NSpS4dxoS-gg&usqp=CAU" /> -->

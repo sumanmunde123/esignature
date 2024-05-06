@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTML to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        #htmlInput {
+            width: 50%;
+            height: 300px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        #pdfCanvas {
+            width: 50%;
+            height: 500px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="htmlInput">Enter HTML code:</label>
+        <textarea id="htmlInput"></textarea>
+    </div>
+    <div>
+       
+    </div>
+    <div id="pdfCanvas"></div>
+
+    <script src="html2pdf.bundle.min.js"></script>
+   
+</body>
+</html>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const htmlInput = document.getElementById("htmlInput");
+    const pdfCanvas = document.getElementById("pdfCanvas");
+
+    // Function to convert HTML to PDF
+    function convertHtmlToPdf() {
+        const htmlContent = htmlInput.value;
+
+        // Use html2pdf library to convert HTML to PDF
+        html2pdf()
+            .from(htmlContent)
+            .outputPdf("datauristring") // Specify data URL as the output type
+            .then(function (pdfDataUri) { // pdfDataUri is now a data URL
+                // Create an <embed> element to display the PDF
+                const pdfEmbed = document.createElement("embed");
+                pdfEmbed.src = pdfDataUri;
+                pdfEmbed.type = "application/pdf";
+                pdfEmbed.width = "100%";
+                pdfEmbed.height = "100%";
+
+                // Clear the previous content and append the PDF
+                pdfCanvas.innerHTML = "";
+                pdfCanvas.appendChild(pdfEmbed);
+            })
+            .catch(function (error) {
+                console.error("Error converting to PDF:", error);
+            });
+    }
+
+    // Listen for changes in the textarea content
+    htmlInput.addEventListener("input", convertHtmlToPdf);
+
+    // Initially, trigger the conversion to load the PDF when the page loads
+    convertHtmlToPdf();
+});
+
+
+</script>

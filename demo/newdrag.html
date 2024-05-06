@@ -1,0 +1,129 @@
+<template>
+    <div>
+      <center>
+        <h1 style="color: green">Editable PDF Viewer</h1>
+        <h3>Select a PDF file to view:</h3>
+        <input type="file" @change="loadPDF" />
+        <br /><br />
+        <!-- Make the .drag div draggable -->
+        <div
+          class="drag"
+          draggable="true"
+          @dragstart="dragStart"
+          @dragend="dragEnd"
+        ></div>
+        <br />
+        <div ref="pdfContainer" @dragover.prevent @drop="dropPDF"></div>
+      </center>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    data() {
+      return {
+        pdfInstance: null,
+        pdfContainer: null,
+        isDragging: false,
+      };
+    },
+    methods: {
+      async loadPDF(event) {
+        const selectedFile = event.target.files[0];
+  
+        if (selectedFile && selectedFile.type === "application/pdf") {
+          const fileReader = new FileReader();
+  
+          // Store the reference to pdfContainer
+          this.pdfContainer = this.$refs.pdfContainer;
+  
+          fileReader.onload = async () => {
+            const arrayBuffer = fileReader.result;
+  
+            // Load the PDF.js worker and library
+            const pdfjsLib = await import("pdfjs-dist/build/pdf");
+  
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+  
+            pdfjsLib.getDocument({ data: arrayBuffer }).promise.then((pdf) => {
+              this.pdfInstance = pdf;
+              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                pdf.getPage(pageNum).then((page) => {
+                  const canvas = document.createElement("canvas");
+                  this.pdfContainer.appendChild(canvas); // Use the stored reference here
+  
+                  const viewport = page.getViewport({ scale: 1.5 });
+                  canvas.width = viewport.width;
+                  canvas.height = viewport.height;
+  
+                  const canvasContext = canvas.getContext("2d");
+                  const renderContext = {
+                    canvasContext,
+                    viewport,
+                  };
+  
+                  page.render(renderContext);
+  
+                  // Enable text annotation on canvas click
+                  canvas.addEventListener("click", (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+  
+                    const text = prompt("Enter your text:");
+                    if (text) {
+                      canvasContext.font = "16px Arial";
+                      canvasContext.fillText(text, x, y);
+                    }
+                  });
+                });
+              }
+            });
+          };
+  
+          fileReader.readAsArrayBuffer(selectedFile);
+        } else {
+          alert("Please select a valid PDF file.");
+        }
+      },
+      dragStart(event) {
+        this.isDragging = true;
+        // Set the data to be transferred during the drag
+        event.dataTransfer.setData("text/plain", "dragging");
+      },
+      dragEnd() {
+        this.isDragging = false;
+      },
+      dropPDF(event) {
+        event.preventDefault();
+  
+        if (this.isDragging) {
+          const text = prompt("Enter your text:");
+          if (text) {
+            const canvas = document.createElement("canvas");
+            this.pdfContainer.appendChild(canvas);
+  
+            // Set the width and height of the empty box
+            canvas.width = 100; // Set your desired width
+            canvas.height = 50; // Set your desired height
+  
+            const canvasContext = canvas.getContext("2d");
+            canvasContext.font = "16px Arial";
+            canvasContext.fillText(text, 10, 30); // Adjust the position as needed
+          }
+        }
+      },
+    },
+  };
+  </script>
+  
+  <style scoped>
+  .drag {
+    border: 1px solid black;
+    width: 20px;
+    height: 20px;
+    background-color: black;
+    cursor: move;
+  }
+  </style>
+  

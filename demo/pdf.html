@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<div id="pdfContainer"></div>
+
+</body>
+</html>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Your PDF.js initialization and code here
+      // Initialize PDF.js
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+// Set worker source for PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.js';
+
+// Load PDF document
+const pdfContainer = document.getElementById('pdfContainer');
+
+pdfjsLib.getDocument('your-pdf-document.pdf').promise.then(pdfDoc => {
+    // Render the first page
+    pdfDoc.getPage(1).then(page => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const viewport = page.getViewport({ scale: 1.0 });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        pdfContainer.appendChild(canvas);
+
+        // Render PDF page on canvas
+        page.render({ canvasContext: context, viewport: viewport });
+    });
+});
+});
+  
+const canvas = document.querySelector('canvas');
+const context = canvas.getContext('2d');
+let isDrawing = false;
+let startX, startY, endX, endY;
+
+canvas.addEventListener('mousedown', (e) => {
+    isDrawing = true;
+    startX = e.clientX - canvas.getBoundingClientRect().left;
+    startY = e.clientY - canvas.getBoundingClientRect().top;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDrawing) return;
+    endX = e.clientX - canvas.getBoundingClientRect().left;
+    endY = e.clientY - canvas.getBoundingClientRect().top;
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw rectangle using startX, startY, endX, endY
+    context.strokeRect(startX, startY, endX - startX, endY - startY);
+});
+
+canvas.addEventListener('mouseup', () => {
+    isDrawing = false;
+    // Save the coordinates of the created box
+    const box = { startX, startY, endX, endY };
+    // You can now store this box information for further use or manipulation.
+});
+
+</script>

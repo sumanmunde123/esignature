@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>PDF Annotation</title>
+    <!-- PDF.js Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.120/pdf.min.js"></script>
+</head>
+<style>
+    /* styles.css */
+    #pdf-container {
+        border: 2px solid red;
+        width: 600px;
+        height: 700px;
+        margin-left: 10%;
+        margin-top: 10px;
+        position: relative;
+    }
+
+    #dragable-div {
+        border: 1px solid black;
+        width: 20px;
+        height: 20px;
+        margin-top: 10px;
+        cursor: move;
+    }
+    #dragable-div_sign{
+        border: 1px solid black;
+        width: 20px;
+        height: 20px;
+        margin-top: 10px;
+        cursor: move;
+    }
+    #dragable-div_check{
+        border: 1px solid black;
+        width: 20px;
+        height: 20px;
+        margin-top: 10px;
+        cursor: move;
+    }
+
+    /* Style for the resizable div */
+    .resizable-div {
+        border: 1px solid blue;
+        position: absolute;
+        resize: both;
+        overflow: hidden;
+        height: 20px;
+        width: 20px;
+
+    }
+    .resizable-div > img{
+    margin-top: -7px;
+    width: 200px;
+    height: 77px;
+    /* margin-left: -14px; */
+       
+    }
+    .popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px;
+        background-color: white;
+        border: 1px solid #ccc;
+        color: blue;
+        z-index: 9999;
+    }
+    #drawing-canvas{
+        color:  blueviolet;
+    }
+</style>
+<body>
+    <input type="file" id="pdf-input" accept=".pdf">
+    <div id="dragable-div" draggable="true"></div>
+    <div id="dragable-div_sign" draggable="true"></div>
+    <div id="dragable-div_check" draggable="true"></div>
+    
+    <div id="pdf-container" ></div>
+
+     <!-- Popup for text input -->
+     <div id="text-popup" class="popup">
+        <textarea id="text-input"></textarea><br>
+        <button id="text-save">Save</button>
+        <button id="text-cancel">Cancel</button>
+    </div>
+
+    <!-- Popup for drawing canvas -->
+    <div id="drawing-popup" class="popup">
+        <!-- Include a canvas element here for drawing -->
+        <canvas id="drawing-canvas" width="300" height="150"></canvas><br>
+        <button id="drawing-save">Save</button>
+        <button id="drawing-cancel">Cancel</button>
+    </div>
+
+    <!-- Popup for checkbox -->
+    <div id="checkbox-popup" class="popup">
+        <input type="checkbox" id="checkbox-input"><br>
+        <button id="checkbox-save">Save</button>
+        <button id="checkbox-cancel">Cancel</button>
+    </div>
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <script>
+        // Function to display the PDF in the container
+        function displayPDF(pdfData) {
+            const container = document.getElementById("pdf-container");
+            const canvas = document.createElement("canvas");
+            container.innerHTML = "";
+            container.appendChild(canvas);
+
+            // Using PDF.js to render the PDF
+            pdfjsLib.getDocument({ data: pdfData }).promise.then(function (pdf) {
+                pdf.getPage(1).then(function (page) {
+                    const viewport = page.getViewport({ scale: 1.0 });
+                    const context = canvas.getContext("2d");
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    page.render({ canvasContext: context, viewport: viewport });
+                });
+            });
+        }
+
+        // Event listener for the file input
+        const fileInput = document.getElementById("pdf-input");
+        fileInput.addEventListener("change", function (e) {
+            const file = e.target.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    // Display the PDF in the container
+                    displayPDF(new Uint8Array(e.target.result));
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+      // Function to create a new resizable div
+      function createResizableDiv(event, id) {
+            const container = document.getElementById("pdf-container");
+            const resizableDiv = document.createElement("div");
+            resizableDiv.classList.add("resizable-div");
+            resizableDiv.id = "resizable-" + id; // Unique ID for each resizable div
+            resizableDiv.style.top = event.clientY - container.getBoundingClientRect().top + "px";
+            resizableDiv.style.left = event.clientX - container.getBoundingClientRect().left + "px";
+            container.appendChild(resizableDiv);
+            makeResizable(resizableDiv);
+
+            // Add click event listener to open the appropriate popup
+            resizableDiv.addEventListener("click", function () {
+                if (id === "dragable-div") {
+                    openTextInputPopup(resizableDiv);
+                } 
+                else if (id === "dragable-div-check") {
+                    openCheckboxPopup(resizableDiv);
+                } 
+                else {
+                    
+                    openDrawingPopup(resizableDiv);
+                }
+                // switch(id){
+                //     case id === 'dragable-div':
+                //     openTextInputPopup(resizableDiv);
+                   
+                //     case id === 'dragable-div-sign':
+                //     openDrawingPopup(resizableDiv);
+                   
+                //     case id === 'dragable-div-check':
+                //     openCheckboxPopup(resizableDiv);
+                //     break;
+                //     default:
+                //         console.log("not working")
+                //    break;
+                
+                // }
+            
+            });
+        }
+
+        // Function to make a div resizable
+        function makeResizable(element) {
+            let isResizing = false;
+            let originalX;
+            let originalY;
+            let originalWidth;
+            let originalHeight;
+
+            element.addEventListener("mousedown", (e) => {
+                isResizing = true;
+                originalX = e.clientX;
+                originalY = e.clientY;
+                originalWidth = parseFloat(getComputedStyle(element, null).getPropertyValue("width").replace("px", ""));
+                originalHeight = parseFloat(getComputedStyle(element, null).getPropertyValue("height").replace("px", ""));
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (!isResizing) return;
+                const deltaX = e.clientX - originalX;
+                const deltaY = e.clientY - originalY;
+                element.style.width = originalWidth + deltaX + "px";
+                element.style.height = originalHeight + deltaY + "px";
+            });
+
+            document.addEventListener("mouseup", () => {
+                isResizing = false;
+            });
+        }
+
+        // Function to open text input popup
+        function openTextInputPopup(resizableDiv) {
+            const textPopup = document.getElementById("text-popup");
+            textPopup.style.display = "block";
+
+            const textInput = document.getElementById("text-input");
+            const textSaveBtn = document.getElementById("text-save");
+            const textCancelBtn = document.getElementById("text-cancel");
+
+            // Display existing content in the input area
+            textInput.value = "";
+
+            // Save button click event
+            textSaveBtn.addEventListener("click", function () {
+                const text = textInput.value;
+                // Append the new content to the resizable div
+                resizableDiv.innerHTML += text;
+                textPopup.style.display = "none";
+            });
+
+            // Cancel button click event
+            textCancelBtn.addEventListener("click", function () {
+                textPopup.style.display = "none";
+            });
+        }
+
+        // Function to open drawing popup
+        function openDrawingPopup(resizableDiv) {
+        const drawingPopup = document.getElementById("drawing-popup");
+        drawingPopup.style.display = "block";
+
+        const drawingCanvas = document.getElementById("drawing-canvas");
+        const drawingSaveBtn = document.getElementById("drawing-save");
+        const drawingCancelBtn = document.getElementById("drawing-cancel");
+
+        const ctx = drawingCanvas.getContext("2d");
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Clear the drawing canvas
+        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+
+        // Start drawing
+        drawingCanvas.addEventListener("mousedown", (e) => {
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        });
+
+        // Continue drawing
+        drawingCanvas.addEventListener("mousemove", (e) => {
+            if (!isDrawing) return;
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        });
+
+        // Stop drawing
+        drawingCanvas.addEventListener("mouseup", () => {
+            isDrawing = false;
+        });
+
+        // Save button click event
+        drawingSaveBtn.addEventListener("click", function () {
+            const drawingDataURL = drawingCanvas.toDataURL();
+            const drawingImage = document.createElement("img");
+            drawingImage.src = drawingDataURL;
+            // Append the new drawing to the resizable div
+            resizableDiv.appendChild(drawingImage);
+            drawingPopup.style.display = "none";
+        });
+
+        // Cancel button click event
+        drawingCancelBtn.addEventListener("click", function () {
+            drawingPopup.style.display = "none";
+        });
+    }
+
+        // Function to open checkbox popup
+        function openCheckboxPopup(resizableDiv) {
+            const checkboxPopup = document.getElementById("checkbox-popup");
+            checkboxPopup.style.display = "block";
+
+            const checkboxInput = document.getElementById("checkbox-input");
+            const checkboxSaveBtn = document.getElementById("checkbox-save");
+            const checkboxCancelBtn = document.getElementById("checkbox-cancel");
+
+            // Display existing content in the checkbox input
+            const existingCheckbox = resizableDiv.querySelector("input[type='checkbox']");
+            if (existingCheckbox) {
+                checkboxInput.checked = existingCheckbox.checked;
+            }
+
+            // Save button click event
+            checkboxSaveBtn.addEventListener("click", function () {
+                const isChecked = checkboxInput.checked;
+                // Append the new content to the resizable div
+                resizableDiv.innerHTML += `<input type="checkbox" ${isChecked ? 'checked' : ''}>`;
+                checkboxPopup.style.display = "none";
+            });
+
+            // Cancel button click event
+            checkboxCancelBtn.addEventListener("click", function () {
+                checkboxPopup.style.display = "none";
+            });
+        }
+ // Event listeners to create resizable divs on drag and drop for each draggable div
+ const draggableDivs = document.querySelectorAll("[draggable=true]");
+        draggableDivs.forEach(function (div) {
+            div.addEventListener("dragstart", function (e) {
+                e.dataTransfer.setData("text/plain", div.id);
+            });
+
+            div.addEventListener("dragend", function (e) {
+                // Get the ID of the dragged div
+                const id = e.target.id;
+                // Create a new resizable div when the draggable div is dropped
+                createResizableDiv(e, id);
+            });
+        });
+    </script>
+</body>
+</html>

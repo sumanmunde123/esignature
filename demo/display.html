@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit PDF in Canvas</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+        }
+        .draggable {
+            position: absolute;
+            cursor: move;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="pdfInput" accept=".pdf">
+    <canvas id="pdfCanvas"></canvas>
+    <button id="addSpaceButton">Add Space</button>
+    <button id="saveButton">Save PDF</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.334/pdf.min.js"></script>
+    <script>
+        const pdfInput = document.getElementById('pdfInput');
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const addSpaceButton = document.getElementById('addSpaceButton');
+        const saveButton = document.getElementById('saveButton');
+        const canvas = pdfCanvas;
+        const ctx = canvas.getContext('2d');
+
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let draggableCount = 0;
+
+        pdfInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                loadPDF(file);
+            }
+        });
+
+        function loadPDF(file) {
+            pdfjsLib.getDocument(file).promise.then(function(pdf) {
+                pdfDoc = pdf;
+                renderPage(pageNum);
+            }).catch(function(error) {
+                console.error('Error loading PDF: ' + error);
+            });
+        }
+
+        function renderPage(num) {
+            pageRendering = true;
+            pdfDoc.getPage(num).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                page.render(renderContext).promise.then(function() {
+                    pageRendering = false;
+                });
+            });
+        }
+
+        addSpaceButton.addEventListener('click', function() {
+            if (pdfDoc && !pageRendering) {
+                const spaceDiv = document.createElement('div');
+                spaceDiv.className = 'draggable';
+                spaceDiv.textContent = 'Drag me!';
+                spaceDiv.style.left = '50px';
+                spaceDiv.style.top = '50px';
+                spaceDiv.draggable = true;
+                spaceDiv.id = 'draggable-' + draggableCount;
+                draggableCount++;
+
+                spaceDiv.addEventListener('dragstart', function(event) {
+                    event.dataTransfer.setData('text/plain', event.target.id);
+                });
+
+                canvas.parentElement.appendChild(spaceDiv);
+            }
+        });
+
+        canvas.addEventListener('dragover', function(event) {
+            event.preventDefault();
+        });
+
+        canvas.addEventListener('drop', function(event) {
+            event.preventDefault();
+            const data = event.dataTransfer.getData('text/plain');
+            const draggable = document.getElementById(data);
+            if (draggable) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                draggable.style.left = x + 'px';
+                draggable.style.top = y + 'px';
+                draggable.style.right = x + 'px';
+                draggable.style.bottom = y + 'px';
+            }
+        });
+
+        saveButton.addEventListener('click', function() {
+            // Implement saving the edited PDF here.
+            // You will need to capture the canvas content, merge it with the PDF,
+            // and save it as a new PDF. This is a complex task and typically requires server-side processing.
+        });
+    </script>
+</body>
+</html>

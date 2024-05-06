@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include esignature_app *.css
+recursive-include esignature_app *.csv
+recursive-include esignature_app *.html
+recursive-include esignature_app *.ico
+recursive-include esignature_app *.js
+recursive-include esignature_app *.json
+recursive-include esignature_app *.md
+recursive-include esignature_app *.png
+recursive-include esignature_app *.py
+recursive-include esignature_app *.svg
+recursive-include esignature_app *.txt
+recursive-exclude esignature_app *.pyc

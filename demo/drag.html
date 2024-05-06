@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    .dragableDiv{
+        border: 1px solid black;
+        width: 30px;
+        height: 30px;
+        background-color: blueviolet;
+        margin-left: 20px;
+        cursor: pointer;
+    }
+    #container{
+        border: 1px solid black;
+        width: 400px;
+        height: 500px;
+        position: relative;
+    }
+    .draggableChild {
+        position: absolute;
+        border: 1px solid black;
+        background-color: lightblue;
+        resize: both;
+        overflow: auto;
+    }
+    .popup {
+        display: none;
+        position: absolute;
+        background-color: white;
+        border: 1px solid #ccc;
+        padding: 10px;
+        z-index: 1;
+    }
+</style>
+<body>
+    <div class="dragableDiv" draggable="true"></div>
+    <div class="dragableDiv" draggable="true"></div>
+    <div class="dragableDiv" draggable="true"></div>
+    <div class="dragableDiv" draggable="true"></div>
+    <div id="container"></div>
+
+    <div class="popup">
+        <input type="text" id="descriptionInput" placeholder="Enter description">
+        <button id="saveButton">Save</button>
+        <button id="closeButton">Close</button>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        let resizingChild = null;
+        let initialWidth, initialHeight;
+        let currentChild = null;
+
+        // Event listener for the dragstart event on draggable elements
+        document.querySelectorAll('.dragableDiv').forEach(item => {
+            item.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', event.target.id);
+            });
+        });
+
+        // Event listener for the dragover event on the container
+        container.addEventListener('dragover', (event) => {
+            event.preventDefault(); // Allow dropping
+        });
+
+        // Event listener for the drop event on the container
+        container.addEventListener('drop', (event) => {
+            event.preventDefault();
+
+            const data = event.dataTransfer.getData('text/plain');
+            const draggedElement = document.getElementById(data);
+
+            // Create a new child div in the container
+            const childDiv = document.createElement('div');
+            childDiv.classList.add('draggableChild');
+            childDiv.style.width = '100px'; // Set initial width
+            childDiv.style.height = '100px'; // Set initial height
+
+            // Position the child div where it was dropped
+            childDiv.style.left = (event.clientX - container.getBoundingClientRect().left) + 'px';
+            childDiv.style.top = (event.clientY - container.getBoundingClientRect().top) + 'px';
+
+            // Append the child div to the container
+            container.appendChild(childDiv);
+
+            // Add event listener to enable resizing
+            childDiv.addEventListener('mousedown', (e) => {
+                resizingChild = childDiv;
+                initialWidth = childDiv.offsetWidth;
+                initialHeight = childDiv.offsetHeight;
+                startX = e.clientX;
+                startY = e.clientY;
+                e.preventDefault();
+            });
+
+            // Add event listener to open the popup when clicking the child div
+            childDiv.addEventListener('click', (e) => {
+                currentChild = childDiv;
+                const popup = document.querySelector('.popup');
+                const descriptionInput = document.getElementById('descriptionInput');
+                descriptionInput.value = currentChild.innerHTML;
+                popup.style.left = e.pageX + 'px';
+                popup.style.top = e.pageY + 'px';
+                popup.style.display = 'block';
+            });
+        });
+
+        // Event listener for the save button
+        const saveButton = document.getElementById('saveButton');
+        saveButton.addEventListener('click', () => {
+            const descriptionInput = document.getElementById('descriptionInput');
+            if (currentChild) {
+                const newText = descriptionInput.value;
+                currentChild.innerHTML += '<br>' + newText;
+            }
+            const popup = document.querySelector('.popup');
+            popup.style.display = 'none';
+        });
+
+        // Event listener for the close button
+        const closeButton = document.getElementById('closeButton');
+        closeButton.addEventListener('click', () => {
+            const popup = document.querySelector('.popup');
+            popup.style.display = 'none';
+        });
+
+        // Event listeners for resizing
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', () => {
+            resizingChild = null;
+        });
+
+        // Function to handle resizing of child div
+        function resize(e) {
+            if (!resizingChild) return;
+            const width = initialWidth + (e.clientX - startX);
+            const height = initialHeight + (e.clientY - startY);
+            resizingChild.style.width = width + 'px';
+            resizingChild.style.height = height + 'px';
+        }
+    </script>
+</body>
+</html>

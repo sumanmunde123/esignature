@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw and Save Popup</title>
+    <style>
+        /* Styles for the popup */
+        .popup-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Styles for the drawing canvas */
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <button id="showPopupButton">Show Popup</button>
+    
+    <!-- Popup Container -->
+    <div class="popup-container" id="popupContainer">
+        <div class="popup">
+            <h2>Description</h2>
+            <p>Draw something here:</p>
+            <canvas id="drawingCanvas" width="400" height="300"></canvas>
+            <br>
+            <button id="saveButton">Save</button>
+            <button id="cancelButton">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        const showPopupButton = document.getElementById('showPopupButton');
+        const popupContainer = document.getElementById('popupContainer');
+        const cancelButton = document.getElementById('cancelButton');
+        const saveButton = document.getElementById('saveButton');
+        const drawingCanvas = document.getElementById('drawingCanvas');
+        const ctx = drawingCanvas.getContext('2d');
+        let isDrawing = false;
+
+        // Function to toggle the popup
+        function togglePopup() {
+            popupContainer.style.display = popupContainer.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Event listener to show the popup when the button is clicked
+        showPopupButton.addEventListener('click', togglePopup);
+
+        // Event listener to close the popup when the cancel button is clicked
+        cancelButton.addEventListener('click', togglePopup);
+
+        // Event listener to handle drawing
+        drawingCanvas.addEventListener('mousedown', () => {
+            isDrawing = true;
+            ctx.beginPath();
+        });
+
+        drawingCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+            ctx.lineTo(e.clientX - drawingCanvas.getBoundingClientRect().left, e.clientY - drawingCanvas.getBoundingClientRect().top);
+            ctx.stroke();
+        });
+
+        drawingCanvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        // Event listener to save the drawing and append it to the webpage
+        saveButton.addEventListener('click', () => {
+            const drawingImage = new Image();
+            drawingImage.src = drawingCanvas.toDataURL();
+            document.body.appendChild(drawingImage);
+            togglePopup();
+        });
+    </script>
+</body>
+</html>
